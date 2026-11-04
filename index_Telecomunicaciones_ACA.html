@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050d08">
+<title>AgroLogistics Global · Arquitectura de Telecomunicaciones</title>
+<style>
+/* =========================================================
+   Sistema visual: colores CUN + "liquid glass" estilo iOS 26
+   Verde lima CUN, verde institucional, naranja y azul de acento
+   ========================================================= */
+:root{
+  --lime:#8dc63f; --green:#2b7a33; --deep:#0e3b22; --orange:#f5a524; --blue:#5b6cf0;
+  --bg:#eaf1e5; --text:#0c1d12; --muted:#4c6353; --accent:#2b7a33; --accent-ink:#ffffff;
+  --glass:rgba(255,255,255,.62); --glass-2:rgba(255,255,255,.34);
+  --glass-border:rgba(255,255,255,.85); --glass-line:rgba(12,29,18,.09);
+  --hi:rgba(255,255,255,.9); --hi-soft:rgba(255,255,255,.35);
+  --shadow:0 12px 40px rgba(14,59,34,.14), 0 2px 6px rgba(14,59,34,.06);
+  --ok:#17914c; --warn:#b97f00; --bad:#cf3b2a;
+  --zone:rgba(255,255,255,.45); --node:rgba(255,255,255,.92); --wire:#7a8f80;
+  --blob1:#b9e57a; --blob2:#7fd6a0; --blob3:#ffd38a; --blob4:#aab4ff;
+  --r-xl:28px; --r-lg:22px; --r-md:16px;
+  --nav-w:256px;
+}
+:root[data-theme="dark"]{
+  --bg:#040b07; --text:#eef7ea; --muted:#9fb6a6; --accent:#a8e063; --accent-ink:#06120a;
+  --glass:rgba(28,48,36,.46); --glass-2:rgba(12,24,17,.30);
+  --glass-border:rgba(255,255,255,.13); --glass-line:rgba(255,255,255,.08);
+  --hi:rgba(255,255,255,.22); --hi-soft:rgba(255,255,255,.06);
+  --shadow:0 18px 50px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.35);
+  --ok:#4ade80; --warn:#fbbf24; --bad:#fb7185;
+  --zone:rgba(255,255,255,.035); --node:rgba(16,30,22,.92); --wire:#5d7465;
+  --blob1:#3f7d17; --blob2:#0f6b45; --blob3:#7a4a00; --blob4:#2a2f86;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable","Segoe UI",Roboto,Inter,Arial,sans-serif;line-height:1.55;font-size:16px;-webkit-font-smoothing:antialiased;transition:background .4s,color .4s}
+a{color:var(--accent)}
+h1,h2,h3{line-height:1.15;letter-spacing:-.02em;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI Variable Display","Segoe UI",Roboto,Inter,Arial,sans-serif}
+h2{font-size:clamp(1.5rem,3.2vw,2.2rem);margin:.5rem 0 .4rem;font-weight:800}
+h3{font-size:1.08rem;margin:1.3rem 0 .5rem;font-weight:700}
+p{margin:.4rem 0}
+.lead{color:var(--muted);margin:.2rem 0 1.1rem;max-width:760px}
+ul.tight{margin:.3rem 0;padding-left:1.15rem} ul.tight li{margin:.25rem 0}
+.cite{color:var(--muted);font-size:.92em}
+
+/* ---------- Fondo vivo ---------- */
+.bg{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.bg i{position:absolute;width:52vmax;height:52vmax;border-radius:50%;filter:blur(70px);opacity:.75;animation:drift 26s ease-in-out infinite alternate}
+.bg i:nth-child(1){background:var(--blob1);top:-18vmax;left:-12vmax}
+.bg i:nth-child(2){background:var(--blob2);bottom:-22vmax;right:-14vmax;animation-delay:-8s}
+.bg i:nth-child(3){background:var(--blob3);top:30%;right:-20vmax;width:36vmax;height:36vmax;opacity:.55;animation-delay:-14s}
+.bg i:nth-child(4){background:var(--blob4);bottom:10%;left:-16vmax;width:34vmax;height:34vmax;opacity:.5;animation-delay:-4s}
+:root[data-theme="dark"] .bg i{opacity:.55}
+.bg::after{content:"";position:absolute;inset:0;background:radial-gradient(1200px 800px at 50% -10%,transparent,var(--bg) 85%);opacity:.35}
+@keyframes drift{0%{transform:translate(0,0) scale(1)}50%{transform:translate(6vmax,4vmax) scale(1.08)}100%{transform:translate(-4vmax,7vmax) scale(.95)}}
+
+/* ---------- Vidrio líquido ---------- */
+.glass{position:relative;background:linear-gradient(145deg,var(--glass),var(--glass-2));
+  -webkit-backdrop-filter:blur(24px) saturate(185%);backdrop-filter:blur(24px) saturate(185%);
+  border:1px solid var(--glass-border);border-radius:var(--r-lg);
+  box-shadow:var(--shadow), inset 0 1px 0 var(--hi), inset 0 -1px 0 var(--hi-soft), inset 0 0 0 .5px var(--glass-line);
+  isolation:isolate}
+.glass::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;
+  background:radial-gradient(420px circle at var(--mx,20%) var(--my,-10%),var(--hi),transparent 55%);opacity:.55;transition:opacity .3s}
+.glass::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;
+  background:linear-gradient(180deg,var(--hi-soft),transparent 38%)}
+.card{padding:20px}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .glass{background:var(--node)}
+}
+
+/* ---------- Barra de progreso ---------- */
+#progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--lime),var(--orange));width:0;z-index:80;border-radius:0 3px 3px 0}
+
+/* ---------- Navegación (escritorio) ---------- */
+nav.side{position:fixed;top:16px;left:16px;bottom:16px;width:var(--nav-w);padding:20px 12px;overflow-y:auto;z-index:60;border-radius:var(--r-xl);display:flex;flex-direction:column}
+.brand{display:flex;gap:10px;align-items:center;margin:0 8px 18px}
+.logo{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-weight:900;color:#0b1f12;background:linear-gradient(135deg,var(--lime),#c9ee8f);box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 4px 14px rgba(141,198,63,.45)}
+.brand b{display:block;font-size:.98rem;letter-spacing:-.01em}
+.brand small{display:block;color:var(--muted);font-size:.74rem}
+nav.side a{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:14px;color:var(--text);text-decoration:none;font-size:.9rem;transition:background .2s,transform .2s}
+nav.side a span{width:24px;height:24px;flex:none;border-radius:8px;display:grid;place-items:center;font-size:.72rem;font-weight:800;background:var(--hi-soft);border:1px solid var(--glass-line);color:var(--muted)}
+nav.side a:hover{background:var(--hi-soft)}
+nav.side a.active{background:linear-gradient(135deg,color-mix(in srgb,var(--lime) 38%,transparent),color-mix(in srgb,var(--lime) 14%,transparent));box-shadow:inset 0 1px 0 var(--hi),0 4px 14px color-mix(in srgb,var(--lime) 25%,transparent);font-weight:700}
+nav.side a.active span{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.nav-foot{margin-top:auto;padding:14px 6px 0;display:flex;gap:8px;align-items:center;justify-content:space-between}
+.read{font-size:.75rem;color:var(--muted)}
+
+/* ---------- Botones ---------- */
+.btn{font:inherit;font-size:.88rem;font-weight:600;color:var(--text);cursor:pointer;padding:9px 16px;border-radius:999px;
+  background:linear-gradient(145deg,var(--glass),var(--glass-2));border:1px solid var(--glass-border);
+  -webkit-backdrop-filter:blur(16px) saturate(170%);backdrop-filter:blur(16px) saturate(170%);
+  box-shadow:inset 0 1px 0 var(--hi),0 2px 8px rgba(0,0,0,.06);transition:transform .15s,box-shadow .2s,background .2s}
+.btn:hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 var(--hi),0 6px 16px rgba(0,0,0,.12)}
+.btn:active{transform:scale(.97)}
+.btn.on{background:linear-gradient(145deg,var(--lime),color-mix(in srgb,var(--lime) 70%,var(--green)));color:#0b1f12;border-color:color-mix(in srgb,var(--lime) 60%,white)}
+.btn:focus-visible,.node:focus-visible,.flip:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+.icon-btn{width:40px;height:40px;padding:0;display:grid;place-items:center;font-size:1rem}
+.seg{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+
+/* ---------- Layout ---------- */
+main{margin-left:calc(var(--nav-w) + 32px);padding:0 32px 80px 16px}
+section{max-width:1000px;margin:0 auto;padding:64px 0 16px}
+.sec-tag{display:inline-flex;align-items:center;gap:8px;font-size:.74rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);padding:5px 12px 5px 5px;border-radius:999px}
+.sec-tag b{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font-size:.72rem}
+.grid{display:grid;gap:16px}
+.grid>*,.sim>*,.diagram-layout>*{min-width:0}
+.grid>.table-wrap{align-self:start}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card h3:first-child{margin-top:0}
+.eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+.pill{display:inline-block;padding:3px 11px;border-radius:999px;font-size:.76rem;font-weight:700;border:1px solid transparent}
+.p-ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 30%,transparent)}
+.p-warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
+.p-bad{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad);border-color:color-mix(in srgb,var(--bad) 30%,transparent)}
+
+/* ---------- Tablas ---------- */
+.table-wrap{overflow-x:auto;border-radius:var(--r-lg);padding:0}
+.table-wrap::before{display:none}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{padding:11px 14px;border-bottom:1px solid var(--glass-line);text-align:left;vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+th{font-size:.76rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;background:var(--hi-soft)}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.86em}
+
+/* ---------- Portada ---------- */
+.hero{min-height:92vh;display:flex;flex-direction:column;justify-content:center;padding-top:40px}
+.hero h1{font-size:clamp(2rem,5.4vw,3.7rem);margin:.8rem 0 1rem;font-weight:850;letter-spacing:-.035em;line-height:1.04}
+.grad{background:linear-gradient(100deg,var(--accent) 10%,var(--lime) 45%,var(--orange) 95%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .sub{font-size:1.12rem;color:var(--muted);max-width:720px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.chip{padding:7px 14px;border-radius:999px;font-size:.82rem;font-weight:600}
+.chip i{font-style:normal;color:var(--bad);margin-right:4px}
+.meta dt{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-top:10px}
+.meta dt:first-child{margin-top:0}
+.meta dd{margin:2px 0 0;font-weight:600}
+
+/* ---------- Matriz de riesgos ---------- */
+.matrix{display:grid;grid-template-columns:64px repeat(3,minmax(0,1fr));grid-auto-rows:minmax(92px,auto);gap:8px}
+.matrix .lbl{display:flex;align-items:center;justify-content:center;font-size:.74rem;color:var(--muted);font-weight:700;text-align:center}
+.cell{border-radius:var(--r-md);padding:7px;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;border:1px solid var(--glass-line)}
+.c1{background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.c2{background:color-mix(in srgb,var(--warn) 17%,transparent)}
+.c3{background:color-mix(in srgb,var(--bad) 18%,transparent)}
+.risk{border:1px solid var(--glass-border);background:var(--node);color:var(--text);border-radius:12px;padding:7px 9px;font:inherit;font-size:.78rem;font-weight:700;cursor:pointer;box-shadow:inset 0 1px 0 var(--hi),0 3px 10px rgba(0,0,0,.1);text-align:left;transition:transform .15s}
+.risk:hover{transform:translateY(-1px)}
+.risk.sel{outline:2px solid var(--blue);outline-offset:1px}
+.axis-note{font-size:.76rem;color:var(--muted);margin-top:6px}
+
+/* ---------- Pestañas ---------- */
+.tabpanel{display:none;animation:fade .3s ease}.tabpanel.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---------- Diagrama ---------- */
+.diagram-layout{display:grid;grid-template-columns:1.75fr 1fr;gap:16px;align-items:start}
+.svg-scroll{overflow-x:auto;padding:10px}
+.svg-scroll::before{display:none}
+#topo{width:100%;height:auto;display:block}
+#topo .zone{fill:var(--zone);stroke:var(--glass-line);stroke-width:1.5}
+#topo .zlabel{fill:var(--muted);font-size:12.5px;font-weight:800;letter-spacing:.07em}
+#topo .link{stroke:var(--wire);stroke-width:2;fill:none}
+#topo .link.dash{stroke-dasharray:6 5}
+#topo .link.flow{stroke:var(--accent);stroke-dasharray:3 9;stroke-width:2.5;animation:flow 1.4s linear infinite}
+#topo .link.down{stroke:var(--bad);stroke-dasharray:4 4;stroke-width:3;animation:none}
+#topo .link.backup{stroke:var(--ok);stroke-width:3;stroke-dasharray:8 5;animation:flow 1s linear infinite}
+#topo .link.hidden{display:none}
+@keyframes flow{to{stroke-dashoffset:-24}}
+#topo .node{cursor:pointer}
+#topo .node rect,#topo .node circle{fill:var(--node);stroke:color-mix(in srgb,var(--accent) 70%,transparent);stroke-width:1.6;transition:all .2s}
+#topo .node text{fill:var(--text);font-size:12.5px;font-weight:650;pointer-events:none}
+#topo .node:hover rect,#topo .node:hover circle{stroke:var(--blue);stroke-width:2.6}
+#topo .node.sel rect,#topo .node.sel circle{fill:color-mix(in srgb,var(--blue) 22%,var(--node));stroke:var(--blue);stroke-width:2.8}
+#topo .node.fail rect{fill:color-mix(in srgb,var(--bad) 24%,var(--node));stroke:var(--bad)}
+#topo .node.takeover rect{fill:color-mix(in srgb,var(--ok) 24%,var(--node));stroke:var(--ok)}
+#topo .tlabel{fill:var(--muted);font-size:11px;font-weight:600}
+.mob-only{display:none}
+.hint{font-size:.78rem;color:var(--muted)}
+
+/* ---------- Tablero ---------- */
+.kpi{padding:16px 18px}
+.kpi .v{font-size:1.7rem;font-weight:800;letter-spacing:-.02em;margin:.25rem 0 .1rem;font-variant-numeric:tabular-nums}
+.kpi .n{font-size:.8rem;color:var(--muted)}
+.kpi .st{display:inline-flex;align-items:center;gap:6px;font-size:.76rem;font-weight:700;color:var(--ok)}
+.kpi .st i{width:9px;height:9px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}
+.kpi.warn .st{color:var(--warn)} .kpi.bad .st{color:var(--bad)}
+.kpi.bad{box-shadow:var(--shadow),inset 0 1px 0 var(--hi),0 0 0 1.5px color-mix(in srgb,var(--bad) 55%,transparent)}
+.alerts{font-size:.85rem;max-height:150px;overflow:auto;margin:6px 0 0;padding-left:1rem;font-variant-numeric:tabular-nums}
+
+/* ---------- Simulador QoS ---------- */
+.sim{display:grid;grid-template-columns:1.25fr 1fr;gap:22px}
+.slider{margin:10px 0 16px}
+.slider label{display:flex;justify-content:space-between;font-weight:650;font-size:.9rem}
+.slider label span{font-variant-numeric:tabular-nums;color:var(--accent)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:999px;background:linear-gradient(90deg,var(--ok),var(--warn),var(--bad));margin-top:10px;opacity:.9}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.92);border:1px solid rgba(0,0,0,.08);box-shadow:0 3px 10px rgba(0,0,0,.25),inset 0 1px 0 #fff;cursor:pointer}
+input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.92);border:1px solid rgba(0,0,0,.08);box-shadow:0 3px 10px rgba(0,0,0,.25);cursor:pointer}
+select{font:inherit;font-size:.88rem;padding:8px 12px;border-radius:12px;border:1px solid var(--glass-border);background:var(--node);color:var(--text)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.switch{display:flex;align-items:center;gap:10px;font-size:.9rem;font-weight:600;cursor:pointer;margin-top:6px}
+.switch input{appearance:none;-webkit-appearance:none;width:50px;height:30px;border-radius:999px;background:color-mix(in srgb,var(--muted) 40%,transparent);position:relative;transition:.25s;cursor:pointer;flex:none}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3);transition:.25s}
+.switch input:checked{background:var(--ok)}
+.switch input:checked::after{left:23px}
+.gauge{display:grid;place-items:center;margin:6px auto 2px}
+.gauge svg{width:190px;height:auto}
+.gauge .track{stroke:var(--glass-line);stroke-width:14;fill:none}
+.gauge .val{stroke-width:14;fill:none;stroke-linecap:round;transition:stroke-dashoffset .4s,stroke .4s}
+.mos{font-size:2rem;font-weight:850;letter-spacing:-.03em;fill:var(--text)}
+.mos-l{font-size:11px;fill:var(--muted);font-weight:700;letter-spacing:.08em}
+.verdict{text-align:center;font-weight:750;margin:0 0 10px}
+#bw{font-size:.84rem;color:var(--muted);margin-top:10px}
+
+/* ---------- Tarjetas que se voltean ---------- */
+.flip{perspective:1000px;height:200px;cursor:pointer;border-radius:var(--r-lg)}
+.flip-in{position:relative;width:100%;height:100%;transition:transform .6s cubic-bezier(.2,.8,.2,1);transform-style:preserve-3d}
+.flip.on .flip-in{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:var(--r-lg);padding:18px;display:flex;flex-direction:column;justify-content:center;border:1px solid var(--glass-border);box-shadow:var(--shadow),inset 0 1px 0 var(--hi)}
+.front{background:linear-gradient(145deg,var(--node),color-mix(in srgb,var(--node) 70%,transparent))}
+.front .eyebrow{color:var(--bad)}
+.back{background:linear-gradient(145deg,var(--green),var(--deep));color:#f2fbe9;transform:rotateY(180deg);font-size:.92rem}
+.back .eyebrow{color:var(--lime)}
+
+/* ---------- Tabla comparativa ---------- */
+#cmp tbody tr{transition:background .15s}
+#cmp tbody tr:hover{background:color-mix(in srgb,var(--lime) 14%,transparent)}
+#cmp td.win{font-weight:650}
+#cmp td.win::before{content:"✓ ";color:var(--ok);font-weight:800}
+#cmp tr.hide{display:none}
+
+/* ---------- Quiz ---------- */
+.q{margin-bottom:16px}
+.q .opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.q .opt.right{background:var(--ok);border-color:var(--ok);color:#fff}
+.q .opt.wrong{background:var(--bad);border-color:var(--bad);color:#fff}
+.q .fb{font-size:.86rem;margin-top:6px;color:var(--muted)}
+#score{font-weight:800;margin-top:6px}
+
+/* ---------- Referencias ---------- */
+.refs p{padding-left:2.2em;text-indent:-2.2em;margin:.6rem 0;font-size:.92rem}
+footer{max-width:1000px;margin:30px auto 0;color:var(--muted);font-size:.8rem;text-align:center}
+
+/* ---------- Barra inferior móvil (tab bar flotante) ---------- */
+.tabbar{display:none}
+.sheet-bg{display:none}
+
+/* ---------- Responsive ---------- */
+@media (max-width:980px){
+  main{margin-left:0;padding:0 16px 120px}
+  section{padding-top:44px}
+  nav.side{top:auto;left:10px;right:10px;bottom:84px;width:auto;max-height:68vh;transform:translateY(120%);opacity:0;transition:transform .35s cubic-bezier(.2,.9,.2,1),opacity .25s;border-radius:var(--r-xl)}
+  nav.side.open{transform:none;opacity:1}
+  .nav-foot{display:none}
+  .sheet-bg{display:block;position:fixed;inset:0;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:.25s;z-index:55}
+  .sheet-bg.on{opacity:1;pointer-events:auto}
+  .tabbar{display:flex;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));z-index:70;align-items:center;gap:6px;padding:6px;border-radius:999px;width:min(440px,calc(100% - 24px))}
+  .tabbar .cur{flex:1;min-width:0;text-align:center;font-size:.84rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tabbar .cur small{display:block;font-size:.68rem;color:var(--muted);font-weight:600}
+  .g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .diagram-layout,.sim{grid-template-columns:1fr}
+}
+@media (max-width:600px){
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .matrix{grid-template-columns:40px repeat(3,minmax(0,1fr));grid-auto-rows:minmax(74px,auto);gap:5px}
+  .matrix .lbl{font-size:.64rem}
+  .risk{font-size:.68rem;padding:5px 6px;word-break:break-word}
+  .flip{height:215px}
+  #topo{min-width:780px}
+  .mob-only{display:block;margin:2px 6px 6px}
+  .card{padding:16px}
+  .hero{min-height:auto;padding-top:56px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+@media print{nav.side,.tabbar,#progress,.bg{display:none}main{margin:0}.glass{backdrop-filter:none;background:#fff}}
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+<div id="progress"></div>
+<div class="sheet-bg" id="sheetBg"></div>
+
+<nav class="side glass" id="nav" aria-label="Secciones del informe">
+  <div class="brand"><div class="logo">AG</div><div><b>AgroLogistics Global</b><small>Informe técnico interactivo</small></div></div>
+  <a href="#portada"><span>a</span>Portada</a>
+  <a href="#introduccion"><span>b</span>Introducción</a>
+  <a href="#diagnostico"><span>c</span>Diagnóstico</a>
+  <a href="#fundamentacion"><span>d</span>Fundamentación teórica</a>
+  <a href="#diseno"><span>e</span>Diseño de la solución</a>
+  <a href="#monitoreo"><span>f</span>Monitoreo de red</a>
+  <a href="#qos"><span>g</span>Calidad de servicio</a>
+  <a href="#seguridad"><span>h</span>Seguridad</a>
+  <a href="#innovacion"><span>i</span>Innovación tecnológica</a>
+  <a href="#discusion"><span>j</span>Discusión</a>
+  <a href="#conclusiones"><span>k</span>Conclusiones</a>
+  <a href="#referencias"><span>l</span>Referencias</a>
+  <div class="nav-foot"><span class="read">⏱ Lectura: 12 min</span><button class="btn icon-btn" id="themeBtn" aria-label="Cambiar modo claro u oscuro">◐</button></div>
+</nav>
+
+<div class="tabbar glass" role="toolbar" aria-label="Navegación móvil">
+  <button class="btn icon-btn" id="menuBtn" aria-label="Abrir secciones" aria-expanded="false">☰</button>
+  <div class="cur" id="curSec"><small>Sección</small>Portada</div>
+  <button class="btn icon-btn" id="themeBtnM" aria-label="Cambiar modo claro u oscuro">◐</button>
+</div>
+
+<main>
+
+<!-- a. PORTADA -->
+<section id="portada" class="hero">
+  <div><span class="sec-tag glass"><b>a</b>ACA · Actualización en Telecomunicaciones</span></div>
+  <h1>Arquitectura de telecomunicaciones <span class="grad">híbrida y virtualizada</span> para AgroLogistics Global</h1>
+  <p class="sub">Diseño e integración de una red definida por software con IoT rural de largo alcance, voz en la nube, monitoreo continuo y seguridad basada en identidad.</p>
+  <div class="grid g2" style="margin-top:26px">
+    <div class="glass table-wrap">
+      <table>
+        <thead><tr><th>Integrante</th><th>Ficha</th></tr></thead>
+        <tbody>
+          <tr><td>Santiago Luna Arias</td><td class="mono">54469</td></tr>
+          <tr><td>Jeisson Sneyder Gallo Ramírez</td><td class="mono">54469</td></tr>
+          <tr><td>Andrés Ruiz Bejarano</td><td class="mono">54469</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <dl class="glass card meta" style="margin:0">
+      <dt>Asignatura</dt><dd>Actualización en Telecomunicaciones</dd>
+      <dt>Institución</dt><dd>Corporación Unificada Nacional de Educación Superior (CUN)</dd>
+      <dt>Programa</dt><dd>Ingeniería de Sistemas</dd>
+      <dt>Año</dt><dd>2026</dd>
+    </dl>
+  </div>
+  <div class="chips">
+    <span class="chip glass"><i>●</i>Red rígida</span><span class="chip glass"><i>●</i>IoT desconectado</span><span class="chip glass"><i>●</i>Telefonía análoga</span><span class="chip glass"><i>●</i>Nube aislada</span><span class="chip glass"><i>●</i>Ceguera operativa</span>
+  </div>
+</section>
+
+<!-- b. INTRODUCCIÓN -->
+<section id="introduccion">
+  <span class="sec-tag glass"><b>b</b>Introducción</span>
+  <h2>La red ya no es soporte: es parte de la operación</h2>
+  <p class="lead">AgroLogistics Global depende de datos del campo, llamadas entre sedes y aplicaciones en dos nubes. Cuando la red falla, se detienen la cosecha, el despacho y la atención al cliente.</p>
+  <div class="grid g3">
+    <div class="glass card">
+      <div class="eyebrow">Telecomunicaciones actuales</div>
+      <ul class="tight">
+        <li>Voz, datos, video e IoT viajan hoy sobre la misma infraestructura IP <span class="cite">(Kurose &amp; Ross, 2021)</span>.</li>
+        <li>Las funciones que antes exigían hardware dedicado ahora corren como software programable.</li>
+      </ul>
+    </div>
+    <div class="glass card">
+      <div class="eyebrow">Redes modernas en la empresa</div>
+      <ul class="tight">
+        <li>Abrir una sede, conectar una finca o mover un servicio a la nube pasa de semanas a horas.</li>
+        <li>La visibilidad permanente permite cumplir acuerdos de servicio y anticipar fallas.</li>
+      </ul>
+    </div>
+    <div class="glass card">
+      <div class="eyebrow">Transformación digital</div>
+      <ul class="tight">
+        <li>La agricultura de precisión requiere telemetría continua de humedad, temperatura y ubicación.</li>
+        <li>Sin una red confiable, la nube, el IoT y la analítica no generan valor para el negocio.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- c. DIAGNÓSTICO -->
+<section id="diagnostico">
+  <span class="sec-tag glass"><b>c</b>Diagnóstico del problema</span>
+  <h2>Falencias, riesgos e impacto</h2>
+  <p class="lead">Matriz de riesgos: probabilidad (filas) contra impacto (columnas). <b>Pulse cada riesgo</b> para ver su efecto y la mitigación propuesta.</p>
+  <div class="grid g2">
+    <div class="glass card">
+      <div class="matrix" id="matrix">
+        <div class="lbl">Alta</div><div class="cell c2" data-p="3" data-i="1"></div><div class="cell c3" data-p="3" data-i="2"></div><div class="cell c3" data-p="3" data-i="3"></div>
+        <div class="lbl">Media</div><div class="cell c1" data-p="2" data-i="1"></div><div class="cell c2" data-p="2" data-i="2"></div><div class="cell c3" data-p="2" data-i="3"></div>
+        <div class="lbl">Baja</div><div class="cell c1" data-p="1" data-i="1"></div><div class="cell c1" data-p="1" data-i="2"></div><div class="cell c2" data-p="1" data-i="3"></div>
+        <div></div><div class="lbl">Impacto bajo</div><div class="lbl">Impacto medio</div><div class="lbl">Impacto alto</div>
+      </div>
+      <p class="axis-note">↑ Probabilidad · Impacto →</p>
+    </div>
+    <div class="glass card" id="riskDetail" aria-live="polite">
+      <h3>Seleccione un riesgo</h3>
+      <p class="lead" style="margin:0">Los riesgos en la zona roja combinan probabilidad e impacto altos: son la prioridad del proyecto.</p>
+    </div>
+  </div>
+  <h3>Resumen del diagnóstico</h3>
+  <div class="glass table-wrap">
+    <table>
+      <thead><tr><th>Falencia de infraestructura</th><th>Riesgo operativo</th><th>Impacto en el negocio</th></tr></thead>
+      <tbody>
+        <tr><td>Routers y firewalls físicos</td><td>Cuellos de botella; cambios manuales equipo por equipo</td><td>Alto costo de mantenimiento; nuevas sedes tardan semanas</td></tr>
+        <tr><td>Sensores IoT sin cobertura estable</td><td>Pérdida de datos del cultivo</td><td>Riego y cosecha sin información; pérdida de producción</td></tr>
+        <tr><td>Telefonía análoga</td><td>Llamadas cortadas y costosas</td><td>Coordinación logística lenta entre sucursales</td></tr>
+        <tr><td>AWS y Azure sin estrategia común</td><td>Sin alta disponibilidad ni gobierno de red</td><td>La caída de un proveedor detiene aplicaciones críticas</td></tr>
+        <tr><td>Sin monitoreo ni políticas de acceso</td><td>Fallas y ataques detectados tarde</td><td>Tiempo fuera de servicio, fuga de datos y sanciones</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- d. FUNDAMENTACIÓN -->
+<section id="fundamentacion">
+  <span class="sec-tag glass"><b>d</b>Fundamentación teórica</span>
+  <h2>Conceptos que sostienen el diseño</h2>
+  <p class="lead">Un tema por pestaña.</p>
+  <div class="seg" role="tablist" id="tabs">
+    <button class="btn on" data-tab="t1" role="tab" aria-selected="true">Redes modernas</button>
+    <button class="btn" data-tab="t2" role="tab" aria-selected="false">Virtualización y cloud</button>
+    <button class="btn" data-tab="t3" role="tab" aria-selected="false">Monitoreo</button>
+    <button class="btn" data-tab="t4" role="tab" aria-selected="false">QoS</button>
+    <button class="btn" data-tab="t5" role="tab" aria-selected="false">Seguridad</button>
+  </div>
+  <div class="glass card">
+    <div class="tabpanel on" id="t1" role="tabpanel">
+      <h3>Redes empresariales modernas: SDN y NFV</h3>
+      <ul class="tight">
+        <li><b>SDN</b> separa el plano de control (decide las rutas) del plano de datos (reenvía los paquetes). Un controlador central programa la red mediante protocolos como OpenFlow <span class="cite">(Kreutz et al., 2015)</span>.</li>
+        <li><b>SD-WAN</b> aplica ese principio a los enlaces entre sedes: un orquestador elige el mejor camino según latencia, pérdida y costo.</li>
+        <li><b>NFV</b> convierte firewalls, routers y balanceadores en software sobre servidores estándar <span class="cite">(European Telecommunications Standards Institute [ETSI], 2012)</span>.</li>
+        <li><b>Por qué aplica:</b> elimina la dependencia del hardware dedicado que hoy causa cuellos de botella y costos altos.</li>
+      </ul>
+    </div>
+    <div class="tabpanel" id="t2" role="tabpanel">
+      <h3>Virtualización y computación en la nube</h3>
+      <ul class="tight">
+        <li>La nube entrega recursos bajo demanda, elásticos y medidos por uso <span class="cite">(Mell &amp; Grance, 2011)</span>.</li>
+        <li><b>VPC (AWS) y VNet (Azure)</b> son redes privadas aisladas con subredes, tablas de ruteo y reglas propias. Se interconectan con AWS Transit Gateway y Azure VPN Gateway.</li>
+        <li><b>Contenedores:</b> Docker empaqueta cada microservicio; Kubernetes los despliega, escala y reinicia de forma automática <span class="cite">(Burns et al., 2022)</span>.</li>
+        <li><b>Por qué aplica:</b> unifica servicios hoy aislados y permite alta disponibilidad entre los dos proveedores.</li>
+      </ul>
+    </div>
+    <div class="tabpanel" id="t3" role="tabpanel">
+      <h3>Monitoreo de redes</h3>
+      <ul class="tight">
+        <li>Recolección continua de métricas (SNMPv3, NetFlow, ping, APIs de nube) y de registros de eventos.</li>
+        <li>Los umbrales convierten datos en alertas antes de que el usuario perciba la falla.</li>
+        <li><b>Por qué aplica:</b> resuelve la ceguera operativa; sin diagnóstico en tiempo real no es posible garantizar una disponibilidad del 99,9%.</li>
+      </ul>
+    </div>
+    <div class="tabpanel" id="t4" role="tabpanel">
+      <h3>Calidad de servicio (QoS)</h3>
+      <ul class="tight">
+        <li>Técnicas que priorizan el tráfico sensible (voz, video) sobre el que tolera demora (correo, respaldos).</li>
+        <li>Se mide con latencia, jitter, pérdida de paquetes y throughput. Para voz se recomienda un retardo menor a 150 ms en un sentido <span class="cite">(International Telecommunication Union [ITU], 2003)</span>.</li>
+        <li><b>Por qué aplica:</b> la nueva telefonía viaja por IP; sin QoS, una descarga grande puede cortar una llamada entre sucursales.</li>
+      </ul>
+    </div>
+    <div class="tabpanel" id="t5" role="tabpanel">
+      <h3>Seguridad en telecomunicaciones</h3>
+      <ul class="tight">
+        <li><b>Confianza cero:</b> ningún usuario o dispositivo es confiable por estar dentro de la red; cada acceso se verifica <span class="cite">(Rose et al., 2020)</span>.</li>
+        <li><b>IAM/RBAC:</b> cada persona recibe solo los permisos de su rol. <b>WAF:</b> filtra ataques web como inyección SQL o XSS <span class="cite">(OWASP Foundation, 2021)</span>.</li>
+        <li><b>Por qué aplica:</b> la nube actual carece de políticas de acceso robustas.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- e. DISEÑO -->
+<section id="diseno">
+  <span class="sec-tag glass"><b>e</b>Diseño de la solución</span>
+  <h2>Topología de la arquitectura propuesta</h2>
+  <p class="lead"><b>Pulse cualquier componente</b> para ver su función y justificación. Use <b>Plan B</b> para simular una falla y ver cómo responde la red.</p>
+  <div class="seg" id="planb">
+    <button class="btn on" data-mode="normal">Operación normal</button>
+    <button class="btn" data-mode="aws">Plan B: cae AWS</button>
+    <button class="btn" data-mode="link">Plan B: cae la fibra de una sede</button>
+  </div>
+  <div class="diagram-layout">
+    <div class="glass svg-scroll">
+      <p class="hint mob-only">Deslice el diagrama hacia los lados →</p>
+      <svg id="topo" viewBox="0 0 960 570" role="img" aria-label="Topología de red propuesta para AgroLogistics Global">
+        <rect class="zone" x="10" y="10" width="290" height="250" rx="18"/><text class="zlabel" x="28" y="36">CAMPO RURAL · IoT</text>
+        <rect class="zone" x="10" y="285" width="290" height="275" rx="18"/><text class="zlabel" x="28" y="311">SEDES Y SUCURSALES</text>
+        <rect class="zone" x="320" y="140" width="305" height="275" rx="18"/><text class="zlabel" x="338" y="402">BORDE SD-WAN · NFV</text>
+        <rect class="zone" x="320" y="435" width="305" height="125" rx="18"/><text class="zlabel" x="338" y="461">OPERACIONES · NOC/SOC</text>
+        <rect class="zone" x="645" y="10" width="305" height="550" rx="18"/><text class="zlabel" x="663" y="36">NUBE HÍBRIDA</text>
+        <!-- enlaces -->
+        <path class="link dash" d="M84 95 L190 135"/><path class="link dash" d="M84 155 L190 140"/><path class="link dash" d="M144 205 L200 157"/>
+        <text class="tlabel" x="34" y="242">LoRa · 915 MHz</text>
+        <path class="link flow" id="l-gw" d="M300 128 Q480 70 660 222"/><text class="tlabel" x="392" y="88">4G/LTE · satelital</text>
+        <path class="link" d="M140 380 L172 412"/><path class="link" d="M140 470 L172 440"/>
+        <path class="link" d="M227 455 L227 485"/>
+        <path class="link flow" id="l-sw" d="M285 418 L340 345"/>
+        <path class="link backup hidden" id="l-bk" d="M285 435 Q470 430 545 368"/>
+        <path class="link" d="M462 345 L482 345"/>
+        <path class="link dash" d="M472 243 L410 323"/><path class="link dash" d="M472 243 L545 323"/>
+        <path class="link flow" id="l-aws" d="M605 330 Q660 215 742 172"/>
+        <path class="link flow" d="M607 352 Q665 352 742 342"/>
+        <path class="link dash" d="M802 180 L802 320"/><text class="tlabel" x="796" y="302" text-anchor="end">VPN inter-nube</text>
+        <path class="link" d="M802 95 L802 135"/><path class="link" d="M862 165 L885 232"/><path class="link" d="M862 352 L885 410"/>
+        <path class="link" d="M727 222 L762 180"/>
+        <path class="link" d="M607 362 Q640 480 668 495"/>
+        <path class="link dash" d="M872 480 L842 180"/>
+        <path class="link dash" d="M472 480 L545 368"/>
+        <!-- nodos -->
+        <g class="node" data-id="sensor" tabindex="0" role="button" aria-label="Sensores IoT"><circle cx="70" cy="95" r="14"/><circle cx="70" cy="155" r="14"/><circle cx="130" cy="205" r="14"/><text x="104" y="72" text-anchor="middle">Sensores</text></g>
+        <g class="node" data-id="gw" tabindex="0" role="button" aria-label="Gateway LoRaWAN"><rect x="190" y="112" width="110" height="46" rx="12"/><text x="245" y="131" text-anchor="middle">Gateway</text><text x="245" y="148" text-anchor="middle">LoRaWAN</text></g>
+        <g class="node" data-id="users" tabindex="0" role="button" aria-label="Usuarios"><rect x="30" y="360" width="110" height="40" rx="12"/><text x="85" y="385" text-anchor="middle">Usuarios</text></g>
+        <g class="node" data-id="phones" tabindex="0" role="button" aria-label="Teléfonos IP"><rect x="30" y="450" width="110" height="40" rx="12"/><text x="85" y="475" text-anchor="middle">Teléfonos IP</text></g>
+        <g class="node" data-id="sw" tabindex="0" role="button" aria-label="Switch capa 3"><rect x="172" y="403" width="113" height="50" rx="12"/><text x="228" y="424" text-anchor="middle">Switch L3</text><text x="228" y="441" text-anchor="middle">(VLAN)</text></g>
+        <g class="node" data-id="dhcp" tabindex="0" role="button" aria-label="DHCP y DNS"><rect x="172" y="487" width="113" height="40" rx="12"/><text x="228" y="512" text-anchor="middle">DHCP · DNS</text></g>
+        <g class="node" data-id="sdn" tabindex="0" role="button" aria-label="Controlador SDN"><rect x="402" y="197" width="140" height="46" rx="12"/><text x="472" y="216" text-anchor="middle">Controlador</text><text x="472" y="233" text-anchor="middle">SDN / SD-WAN</text></g>
+        <g class="node" data-id="vfw" tabindex="0" role="button" aria-label="Firewall virtual"><rect x="335" y="323" width="127" height="46" rx="12"/><text x="398" y="342" text-anchor="middle">Firewall</text><text x="398" y="359" text-anchor="middle">virtual (NFV)</text></g>
+        <g class="node" data-id="vrouter" tabindex="0" role="button" aria-label="vRouter SD-WAN"><rect x="482" y="323" width="127" height="46" rx="12"/><text x="545" y="342" text-anchor="middle">vRouter</text><text x="545" y="359" text-anchor="middle">SD-WAN</text></g>
+        <g class="node" data-id="mon" tabindex="0" role="button" aria-label="Monitoreo PRTG y Splunk"><rect x="397" y="480" width="150" height="46" rx="12"/><text x="472" y="499" text-anchor="middle">PRTG + Splunk</text><text x="472" y="516" text-anchor="middle">monitoreo</text></g>
+        <g class="node" data-id="waf" tabindex="0" role="button" aria-label="WAF"><rect x="742" y="55" width="120" height="40" rx="12"/><text x="802" y="80" text-anchor="middle">WAF</text></g>
+        <g class="node" data-id="aws" tabindex="0" role="button" aria-label="AWS VPC"><rect x="742" y="135" width="120" height="46" rx="12"/><text x="802" y="154" text-anchor="middle">AWS VPC</text><text x="802" y="171" text-anchor="middle">(hub · TGW)</text></g>
+        <g class="node" data-id="lns" tabindex="0" role="button" aria-label="Servidor de red LoRaWAN"><rect x="662" y="222" width="130" height="46" rx="12"/><text x="727" y="241" text-anchor="middle">Servidor de red</text><text x="727" y="258" text-anchor="middle">LoRaWAN</text></g>
+        <g class="node" data-id="eks" tabindex="0" role="button" aria-label="EKS"><rect x="842" y="232" width="95" height="40" rx="12"/><text x="889" y="257" text-anchor="middle">EKS</text></g>
+        <g class="node" data-id="azure" tabindex="0" role="button" aria-label="Azure VNet"><rect x="742" y="320" width="120" height="46" rx="12"/><text x="802" y="339" text-anchor="middle">Azure VNet</text><text x="802" y="356" text-anchor="middle">(spoke)</text></g>
+        <g class="node" data-id="aks" tabindex="0" role="button" aria-label="AKS"><rect x="842" y="410" width="95" height="40" rx="12"/><text x="889" y="435" text-anchor="middle">AKS</text></g>
+        <g class="node" data-id="pbx" tabindex="0" role="button" aria-label="PBX virtual UCaaS"><rect x="662" y="478" width="125" height="46" rx="12"/><text x="724" y="497" text-anchor="middle">PBX virtual</text><text x="724" y="514" text-anchor="middle">UCaaS · SIP</text></g>
+        <g class="node" data-id="iam" tabindex="0" role="button" aria-label="IAM SSO MFA"><rect x="807" y="478" width="130" height="46" rx="12"/><text x="872" y="497" text-anchor="middle">IAM / SSO</text><text x="872" y="514" text-anchor="middle">+ MFA</text></g>
+      </svg>
+    </div>
+    <div class="glass card" id="nodeInfo" aria-live="polite">
+      <h3>Seleccione un componente</h3>
+      <p class="lead" style="margin:0">Cada bloque del diagrama responde a uno de los cinco problemas del diagnóstico. Las líneas animadas muestran el tráfico activo.</p>
+    </div>
+  </div>
+
+  <h3>Arquitectura y segmentación</h3>
+  <p class="lead">Cada tipo de tráfico vive en su propio segmento: si un sensor o un invitado se compromete, no alcanza los sistemas críticos.</p>
+  <div class="glass table-wrap">
+    <table>
+      <thead><tr><th>VLAN / zona</th><th>Contenido</th><th>Red (ejemplo)</th><th>Prioridad QoS</th></tr></thead>
+      <tbody>
+        <tr><td>10 · Administración</td><td>Equipos de red y controlador SDN</td><td class="mono">10.10.0.0/24</td><td>Alta (CS6)</td></tr>
+        <tr><td>20 · Voz</td><td>Teléfonos IP y softphones</td><td class="mono">10.20.0.0/24</td><td>Máxima (EF)</td></tr>
+        <tr><td>30 · IoT</td><td>Gateways LoRaWAN de respaldo local</td><td class="mono">10.30.0.0/22</td><td>Media (AF21)</td></tr>
+        <tr><td>40 · Usuarios</td><td>Computadores corporativos</td><td class="mono">10.40.0.0/23</td><td>Normal (BE)</td></tr>
+        <tr><td>50 · Invitados</td><td>Wi-Fi de visitantes, solo internet</td><td class="mono">10.50.0.0/24</td><td>Baja (CS1)</td></tr>
+        <tr><td>Nube</td><td>Subredes públicas (WAF) y privadas (apps y datos), con Security Groups y NSG</td><td class="mono">172.16.0.0/16 · 172.17.0.0/16</td><td>Según servicio</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="grid g3" style="margin-top:16px">
+    <div class="glass card"><h3>Servicios de red</h3>
+      <ul class="tight"><li><b>DHCP:</b> un ámbito por VLAN; el switch L3 actúa como relay hacia el servidor de cada sede.</li><li><b>DNS:</b> interno para nombres corporativos; DNS de nube (Route 53 / Azure DNS) con chequeo de salud para conmutar entre nubes.</li><li><b>Enrutamiento:</b> BGP sobre la SD-WAN hacia ambas nubes; el controlador elige el mejor enlace por latencia y costo.</li></ul></div>
+    <div class="glass card"><h3>Integración cloud y virtualización</h3>
+      <ul class="tight"><li>AWS como hub con Transit Gateway; Azure como spoke y respaldo activo por VPN IPsec.</li><li>Microservicios en Kubernetes (EKS y AKS) para desplegar igual en ambas nubes.</li><li>Firewall y router virtuales sobre servidores estándar, sin hardware propietario.</li></ul></div>
+    <div class="glass card"><h3>Seguridad en el diseño</h3>
+      <ul class="tight"><li>Acceso por identidad (SSO + MFA) para personas y servicios.</li><li>Microsegmentación: el firewall virtual solo permite los flujos autorizados entre VLAN.</li><li>WAF delante de toda aplicación expuesta y reglas de denegación por defecto en la nube.</li></ul></div>
+  </div>
+</section>
+
+<!-- f. MONITOREO -->
+<section id="monitoreo">
+  <span class="sec-tag glass"><b>f</b>Estrategia de monitoreo de red</span>
+  <h2>Qué, cómo y por qué se monitorea</h2>
+  <div class="glass table-wrap">
+    <table>
+      <thead><tr><th>¿Qué se monitorea?</th><th>¿Cómo? (herramienta y sensor)</th><th>¿Por qué importa a AgroLogistics?</th></tr></thead>
+      <tbody>
+        <tr><td>Disponibilidad de enlaces WAN y SD-WAN</td><td>PRTG: sensores Ping y SNMPv3</td><td>Una sede sin enlace detiene despachos y llamadas</td></tr>
+        <tr><td>Consumo de ancho de banda por aplicación</td><td>PRTG: sensor NetFlow</td><td>Detectar qué tráfico satura el enlace y ajustar QoS</td></tr>
+        <tr><td>Gateways y sensores LoRaWAN reportando</td><td>PRTG: sensor REST hacia el servidor de red LoRaWAN</td><td>Sin datos de campo no hay agricultura de precisión</td></tr>
+        <tr><td>Calidad de voz (MOS, jitter, pérdida)</td><td>PRTG: sensor QoS de ida y vuelta; reportes de la PBX</td><td>Llamadas claras entre sucursales</td></tr>
+        <tr><td>CPU, memoria y pods en la nube</td><td>CloudWatch y Azure Monitor integrados en PRTG</td><td>Detectar saturación antes de que caiga una aplicación</td></tr>
+        <tr><td>Accesos fallidos, eventos del WAF y cambios en la nube</td><td>Splunk: correlación de logs de IAM, WAF, CloudTrail y firewall</td><td>Detectar ataques y accesos indebidos a tiempo</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Tablero de ejemplo (simulado)</h3>
+  <p class="lead">Los valores se actualizan cada 3 segundos. Pulse <b>Simular incidente</b> para ver cómo reacciona el tablero.</p>
+  <div class="seg"><button class="btn" id="incBtn">⚠︎ Simular incidente</button><button class="btn" id="resetBtn">↺ Normalizar</button></div>
+  <div class="grid g3" id="kpis"></div>
+  <div class="glass card" style="margin-top:16px">
+    <b>Registro de alertas</b>
+    <ul class="alerts" id="alerts"><li>Sin alertas activas.</li></ul>
+  </div>
+</section>
+
+<!-- g. QoS -->
+<section id="qos">
+  <span class="sec-tag glass"><b>g</b>Análisis de calidad de servicio</span>
+  <h2>Cómo se siente una llamada según la red</h2>
+  <div class="grid g4">
+    <div class="glass card"><div class="eyebrow">Latencia</div><p>Tiempo que tarda la voz en llegar. Sobre 150 ms las personas empiezan a interrumpirse.</p></div>
+    <div class="glass card"><div class="eyebrow">Jitter</div><p>Variación del retardo entre paquetes. Produce voz entrecortada o metálica.</p></div>
+    <div class="glass card"><div class="eyebrow">Pérdida</div><p>Paquetes que no llegan. Desde 1% se escuchan palabras incompletas.</p></div>
+    <div class="glass card"><div class="eyebrow">Throughput</div><p>Datos útiles por segundo. Una llamada G.711 consume cerca de 87 kbps con encabezados.</p></div>
+  </div>
+  <h3>Simulador de llamada VoIP entre sucursales</h3>
+  <p class="lead">Mueva los controles. El cálculo usa una versión simplificada del modelo E <span class="cite">(ITU, 2015)</span> para estimar el MOS (1 = pésima, 4,5 = excelente).</p>
+  <div class="glass card sim">
+    <div>
+      <div class="slider"><label for="sLat">Latencia <span id="vLat"></span></label><input type="range" id="sLat" min="10" max="600" value="80"></div>
+      <div class="slider"><label for="sJit">Jitter <span id="vJit"></span></label><input type="range" id="sJit" min="0" max="120" value="10"></div>
+      <div class="slider"><label for="sLoss">Pérdida de paquetes <span id="vLoss"></span></label><input type="range" id="sLoss" min="0" max="10" step="0.1" value="0.2"></div>
+      <div class="slider"><label for="sCalls">Llamadas simultáneas <span id="vCalls"></span></label><input type="range" id="sCalls" min="1" max="120" value="20"></div>
+      <div class="row">
+        <label for="codec" class="hint" style="font-weight:700">Códec</label>
+        <select id="codec"><option value="87.2">G.711 · 87,2 kbps</option><option value="31.2">G.729 · 31,2 kbps</option></select>
+        <label for="link" class="hint" style="font-weight:700">Enlace</label>
+        <select id="link"><option value="5000">5 Mbps</option><option value="10000" selected>10 Mbps</option><option value="50000">50 Mbps</option></select>
+      </div>
+      <label class="switch"><input type="checkbox" id="qosOn" checked> QoS activo (voz priorizada con DSCP EF)</label>
+      <p id="bw"></p>
+    </div>
+    <div>
+      <div class="gauge">
+        <svg viewBox="0 0 200 120" aria-hidden="true">
+          <path class="track" d="M20 105 A80 80 0 0 1 180 105"/>
+          <path class="val" id="arc" d="M20 105 A80 80 0 0 1 180 105" pathLength="100" stroke-dasharray="100" stroke-dashoffset="20"/>
+          <text class="mos" id="mos" x="100" y="96" text-anchor="middle">4.3</text>
+          <text class="mos-l" x="100" y="115" text-anchor="middle">MOS</text>
+        </svg>
+      </div>
+      <p class="verdict" id="verdict" aria-live="polite">Buena</p>
+      <div class="glass table-wrap" style="box-shadow:none">
+        <table><thead><tr><th>Métrica</th><th>Buena</th><th>Regular</th><th>Mala</th></tr></thead>
+          <tbody>
+            <tr id="rLat"><td>Latencia</td><td>&lt;150 ms</td><td>150–400</td><td>&gt;400</td></tr>
+            <tr id="rJit"><td>Jitter</td><td>&lt;30 ms</td><td>30–50</td><td>&gt;50</td></tr>
+            <tr id="rLoss"><td>Pérdida</td><td>&lt;1%</td><td>1–3%</td><td>&gt;3%</td></tr>
+          </tbody></table>
+      </div>
+    </div>
+  </div>
+  <h3>Medidas QoS aplicadas en el diseño</h3>
+  <ul class="tight">
+    <li>Marcado DSCP: voz en EF (46), señalización SIP en CS3 <span class="cite">(Rosenberg et al., 2002)</span>, IoT en AF21 y tráfico general en BE.</li>
+    <li>Cola de prioridad estricta para voz en el vRouter SD-WAN, con un máximo de 30% del enlace reservado.</li>
+    <li>Buffer de jitter adaptativo en los teléfonos IP y códec G.729 en sedes con enlace limitado.</li>
+  </ul>
+</section>
+
+<!-- h. SEGURIDAD -->
+<section id="seguridad">
+  <span class="sec-tag glass"><b>h</b>Seguridad en la infraestructura</span>
+  <h2>Riesgo → mitigación</h2>
+  <p class="lead"><b>Pulse cada tarjeta</b> para voltearla y ver cómo se mitiga el riesgo.</p>
+  <div class="grid g3" id="cards"></div>
+  <h3>Buenas prácticas</h3>
+  <ul class="tight">
+    <li>Mínimo privilegio y revisión trimestral de permisos.</li>
+    <li>MFA obligatorio para todo acceso administrativo y remoto.</li>
+    <li>Cifrado en tránsito (TLS, IPsec, SRTP) y en reposo para los datos en la nube.</li>
+    <li>Calendario fijo de parches y actualización de firmware de gateways IoT.</li>
+    <li>Plan de respuesta a incidentes probado dos veces al año.</li>
+  </ul>
+</section>
+
+<!-- i. INNOVACIÓN -->
+<section id="innovacion">
+  <span class="sec-tag glass"><b>i</b>Innovación tecnológica</span>
+  <h2>Cómo cada tecnología mejora el diseño</h2>
+  <div class="grid g3">
+    <div class="glass card"><div class="eyebrow">Cloud computing</div><h3 style="margin-top:4px">Capacidad elástica</h3>
+      <ul class="tight"><li>Escala en cosecha y se reduce en temporada baja: se paga lo que se usa.</li><li>Dos proveedores dan continuidad si uno falla.</li><li>Nuevas aplicaciones en horas con Kubernetes.</li></ul></div>
+    <div class="glass card"><div class="eyebrow">IoT · LPWAN</div><h3 style="margin-top:4px">Cobertura donde no llega el celular</h3>
+      <ul class="tight"><li>LoRaWAN alcanza varios kilómetros en zona rural con un solo gateway <span class="cite">(Mekki et al., 2019)</span>.</li><li>Sensores con baterías de varios años: menos visitas de mantenimiento.</li><li>NB-IoT para sensores ubicados donde sí hay cobertura del operador.</li></ul></div>
+    <div class="glass card"><div class="eyebrow">SDN</div><h3 style="margin-top:4px">Una red que se programa</h3>
+      <ul class="tight"><li>Una política se aplica a todas las sedes desde el controlador.</li><li>El tráfico se desvía solo al mejor enlace cuando uno se degrada.</li><li>Menos hardware propietario y menor costo de soporte.</li></ul></div>
+  </div>
+</section>
+
+<!-- j. DISCUSIÓN -->
+<section id="discusion">
+  <span class="sec-tag glass"><b>j</b>Discusión</span>
+  <h2>Red tradicional vs. propuesta</h2>
+  <p class="lead">Filtre por criterio y pase el cursor sobre una fila para resaltarla.</p>
+  <div class="seg" id="filters">
+    <button class="btn on" data-f="all">Todos</button>
+    <button class="btn" data-f="costo">Costo</button>
+    <button class="btn" data-f="rend">Rendimiento</button>
+    <button class="btn" data-f="seg">Seguridad</button>
+    <button class="btn" data-f="op">Operación</button>
+  </div>
+  <div class="glass table-wrap">
+    <table id="cmp">
+      <thead><tr><th>Criterio</th><th>Red tradicional</th><th>Red propuesta</th></tr></thead>
+      <tbody>
+        <tr data-c="costo"><td>Mantenimiento</td><td>Hardware dedicado por sede y contratos de soporte por equipo</td><td class="win">Funciones virtuales en servidores estándar</td></tr>
+        <tr data-c="costo"><td>Telefonía interurbana</td><td>Tarifa por minuto en líneas análogas</td><td class="win">SIP Trunking; llamadas internas sin costo por minuto</td></tr>
+        <tr data-c="rend"><td>Calidad de voz</td><td>Variable, sin priorización</td><td class="win">QoS con prioridad EF y MOS monitoreado</td></tr>
+        <tr data-c="rend"><td>Cobertura rural</td><td>Sensores sin conexión estable</td><td class="win">LoRaWAN de largo alcance y NB-IoT</td></tr>
+        <tr data-c="rend"><td>Escalabilidad</td><td>Comprar e instalar equipos (semanas)</td><td class="win">Aprovisionamiento por software (horas)</td></tr>
+        <tr data-c="seg"><td>Control de acceso</td><td>Usuarios y contraseñas locales</td><td class="win">SSO, MFA y RBAC centralizados</td></tr>
+        <tr data-c="seg"><td>Protección web</td><td>Firewall perimetral sin inspección de aplicación</td><td class="win">WAF con reglas OWASP</td></tr>
+        <tr data-c="op"><td>Visibilidad</td><td>Las fallas las reportan los usuarios</td><td class="win">Tablero en tiempo real con alertas</td></tr>
+        <tr data-c="op"><td>Alta disponibilidad</td><td>Punto único de falla por sede y por nube</td><td class="win">SD-WAN con respaldo 4G y dos nubes</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="glass card"><h3>Ventajas de la propuesta</h3>
+      <ul class="tight"><li>Menor costo operativo a mediano plazo.</li><li>Datos de campo continuos para decisiones de riego y cosecha.</li><li>Comunicaciones unificadas (voz, chat, video) entre todas las sedes.</li><li>Seguridad basada en identidad, no solo en el perímetro.</li></ul></div>
+    <div class="glass card"><h3>Posibles limitaciones</h3>
+      <ul class="tight"><li>Inversión inicial en migración y capacitación del equipo técnico.</li><li>Dependencia del internet de cada sede (mitigada con 4G de respaldo).</li><li>Operar dos nubes exige más gobierno y control de costos.</li><li>LoRaWAN tiene bajo ancho de banda: sirve para telemetría, no para video.</li><li>La migración debe hacerse por fases para no interrumpir la operación.</li></ul></div>
+  </div>
+</section>
+
+<!-- k. CONCLUSIONES -->
+<section id="conclusiones">
+  <span class="sec-tag glass"><b>k</b>Conclusiones</span>
+  <h2>Qué gana AgroLogistics y qué aprendimos</h2>
+  <div class="grid g3">
+    <div class="glass card"><div class="eyebrow">Reflexión técnica</div><p>Los cinco problemas comparten una causa: una red pensada para hardware fijo. Pasar a software (SDN, NFV, nube y contenedores) es lo que permite integrar IoT, voz, monitoreo y seguridad en una sola arquitectura.</p></div>
+    <div class="glass card"><div class="eyebrow">Impacto en la organización</div><p>Operación continua, datos del campo disponibles, llamadas de calidad entre sedes y una superficie de ataque controlada. La red deja de ser un costo fijo y se vuelve una plataforma para crecer.</p></div>
+    <div class="glass card"><div class="eyebrow">Aprendizajes del equipo</div>
+      <ul class="tight">
+        <li><b>Santiago Luna:</b> al diseñar la topología entendí que la alta disponibilidad no se agrega al final. El Plan B (4G de respaldo y una segunda nube) tiene que estar en el diagrama desde el primer día.</li>
+        <li><b>Jeisson Gallo:</b> el simulador de QoS me mostró que una red con buen ancho de banda puede dar malas llamadas: el jitter y la pérdida pesan tanto como la latencia, y priorizar la voz cambia el resultado.</li>
+        <li><b>Andrés Ruiz:</b> en seguridad aprendí que el firewall ya no basta. En la nube el perímetro es la identidad: MFA, roles con mínimo privilegio y segmentación protegen más que cualquier equipo en el borde.</li>
+      </ul></div>
+  </div>
+  <h3>Repaso rápido</h3>
+  <div class="glass card" id="quiz"></div>
+</section>
+
+<!-- l. REFERENCIAS -->
+<section id="referencias">
+  <span class="sec-tag glass"><b>l</b>Referencias · APA 7</span>
+  <h2>Referencias</h2>
+  <div class="glass card refs">
+    <p>Burns, B., Beda, J., Hightower, K., &amp; Evenson, L. (2022). <i>Kubernetes: Up and running</i> (3.ª ed.). O'Reilly Media.</p>
+    <p>European Telecommunications Standards Institute. (2012). <i>Network functions virtualisation: An introduction, benefits, enablers, challenges &amp; call for action</i> [Libro blanco]. ETSI.</p>
+    <p>International Telecommunication Union. (2003). <i>One-way transmission time</i> (Recomendación ITU-T G.114). ITU.</p>
+    <p>International Telecommunication Union. (2015). <i>The E-model: A computational model for use in transmission planning</i> (Recomendación ITU-T G.107). ITU.</p>
+    <p>Kreutz, D., Ramos, F. M. V., Veríssimo, P. E., Rothenberg, C. E., Azodolmolky, S., &amp; Uhlig, S. (2015). Software-defined networking: A comprehensive survey. <i>Proceedings of the IEEE, 103</i>(1), 14–76. https://doi.org/10.1109/JPROC.2014.2371999</p>
+    <p>Kurose, J. F., &amp; Ross, K. W. (2021). <i>Computer networking: A top-down approach</i> (8.ª ed.). Pearson.</p>
+    <p>Mekki, K., Bajic, E., Chaxel, F., &amp; Meyer, F. (2019). A comparative study of LPWAN technologies for large-scale IoT deployment. <i>ICT Express, 5</i>(1), 1–7. https://doi.org/10.1016/j.icte.2017.12.005</p>
+    <p>Mell, P., &amp; Grance, T. (2011). <i>The NIST definition of cloud computing</i> (NIST Special Publication 800-145). National Institute of Standards and Technology. https://doi.org/10.6028/NIST.SP.800-145</p>
+    <p>OWASP Foundation. (2021). <i>OWASP Top 10:2021</i>. https://owasp.org/Top10/</p>
+    <p>Rose, S., Borchert, O., Mitchell, S., &amp; Connelly, S. (2020). <i>Zero trust architecture</i> (NIST Special Publication 800-207). National Institute of Standards and Technology. https://doi.org/10.6028/NIST.SP.800-207</p>
+    <p>Rosenberg, J., Schulzrinne, H., Camarillo, G., Johnston, A., Peterson, J., Sparks, R., Handley, M., &amp; Schooler, E. (2002). <i>SIP: Session initiation protocol</i> (RFC 3261). Internet Engineering Task Force. https://doi.org/10.17487/RFC3261</p>
+  </div>
+  <footer>ACA · Actualización en Telecomunicaciones · CUN · Ficha 54469 · 2026</footer>
+</section>
+
+</main>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  /* ---------- Tema ---------- */
+  var root=document.documentElement, meta=document.querySelector('meta[name="theme-color"]');
+  function setTheme(t){root.setAttribute('data-theme',t);meta.setAttribute('content',t==='dark'?'#040b07':'#eaf1e5');try{localStorage.setItem('aca-theme',t)}catch(e){}}
+  var saved=null;try{saved=localStorage.getItem('aca-theme')}catch(e){}
+  setTheme(saved||((window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'));
+  function toggleTheme(){setTheme(root.getAttribute('data-theme')==='dark'?'light':'dark')}
+  $('themeBtn').onclick=toggleTheme;$('themeBtnM').onclick=toggleTheme;
+
+  /* ---------- Brillo líquido que sigue el puntero ---------- */
+  var raf=0,lastE=null;
+  document.addEventListener('pointermove',function(e){lastE=e;if(raf)return;raf=requestAnimationFrame(function(){raf=0;
+    var g=lastE.target.closest&&lastE.target.closest('.glass');if(!g)return;var r=g.getBoundingClientRect();
+    g.style.setProperty('--mx',(lastE.clientX-r.left)+'px');g.style.setProperty('--my',(lastE.clientY-r.top)+'px');});},{passive:true});
+
+  /* ---------- Menú ---------- */
+  var nav=$('nav'),bg=$('sheetBg'),mb=$('menuBtn');
+  function openNav(o){nav.classList.toggle('open',o);bg.classList.toggle('on',o);mb.setAttribute('aria-expanded',o?'true':'false')}
+  mb.onclick=function(){openNav(!nav.classList.contains('open'))};bg.onclick=function(){openNav(false)};
+  var links=[].slice.call(nav.querySelectorAll('a'));
+  links.forEach(function(a){a.addEventListener('click',function(){openNav(false)})});
+  var secs=links.map(function(a){return document.querySelector(a.getAttribute('href'))});
+  var cur=$('curSec');
+  function onScroll(){
+    var y=window.scrollY+innerHeight*.3,c=0;
+    secs.forEach(function(s,i){if(s.offsetTop<=y)c=i});
+    links.forEach(function(a,i){a.classList.toggle('active',i===c)});
+    cur.innerHTML='<small>Sección '+(c+1)+' de '+links.length+'</small>'+links[c].lastChild.textContent;
+    var h=document.documentElement.scrollHeight-innerHeight;
+    $('progress').style.width=(h>0?window.scrollY/h*100:0)+'%';
+  }
+  window.addEventListener('scroll',onScroll,{passive:true});onScroll();
+
+  /* ---------- Matriz de riesgos ---------- */
+  var risks=[
+    {id:'R1',name:'Pérdida de datos IoT',p:3,i:3,efecto:'Los sensores dejan de reportar humedad y temperatura. El riego y la cosecha se planean a ciegas y se pierde producción.',mit:'LoRaWAN privado con gateways solares y respaldo 4G/satelital; monitoreo de sensores activos.'},
+    {id:'R2',name:'Brecha de acceso en la nube',p:3,i:3,efecto:'Cuentas sin MFA o con permisos excesivos permiten robar o borrar datos de clientes y de operación.',mit:'IAM/RBAC con mínimo privilegio, SSO, MFA y WAF delante de las aplicaciones.'},
+    {id:'R3',name:'Llamadas fallidas',p:3,i:2,efecto:'La coordinación de despachos entre sucursales se retrasa y suben los costos interurbanos.',mit:'UCaaS con PBX virtual y SIP Trunking; QoS con prioridad para la voz.'},
+    {id:'R4',name:'Cuello de botella WAN',p:2,i:3,efecto:'El hardware saturado vuelve lentas todas las aplicaciones y una falla deja la sede sin servicio.',mit:'SD-WAN controlada por SDN, funciones de red virtualizadas y enlace 4G de respaldo.'},
+    {id:'R5',name:'Caída de un proveedor cloud',p:1,i:3,efecto:'Sin estrategia multinube, una caída de AWS o Azure detiene las aplicaciones críticas.',mit:'Hub-and-spoke AWS/Azure con Kubernetes en ambas nubes y conmutación por DNS.'},
+    {id:'R6',name:'Fallas detectadas tarde',p:2,i:2,efecto:'Sin monitoreo, los problemas los reportan los usuarios horas después.',mit:'PRTG para métricas y Splunk para eventos, con alertas por umbral.'},
+    {id:'R7',name:'Soporte costoso',p:3,i:1,efecto:'Los contratos de soporte por cada equipo físico consumen el presupuesto de innovación.',mit:'Reemplazo progresivo de equipos dedicados por NFV.'}
+  ];
+  var lvlP=['','Baja','Media','Alta'],lvlI=['','bajo','medio','alto'];
+  risks.forEach(function(r){
+    var cell=document.querySelector('.cell[data-p="'+r.p+'"][data-i="'+r.i+'"]');
+    var b=document.createElement('button');b.className='risk';b.innerHTML='<span style="opacity:.6">'+r.id+'</span> '+r.name;
+    b.onclick=function(){
+      document.querySelectorAll('.risk').forEach(function(x){x.classList.remove('sel')});b.classList.add('sel');
+      var sev=r.p*r.i,cls=sev>=6?'p-bad':(sev>=3?'p-warn':'p-ok'),txt=sev>=6?'Crítico':(sev>=3?'Moderado':'Bajo');
+      $('riskDetail').innerHTML='<div class="eyebrow">'+r.id+'</div><h3 style="margin-top:0">'+r.name+'</h3><p><span class="pill '+cls+'">'+txt+'</span> &nbsp;Probabilidad '+lvlP[r.p].toLowerCase()+' · impacto '+lvlI[r.i]+'</p><p><b>Efecto en el negocio:</b> '+r.efecto+'</p><p style="margin-bottom:0"><b>Mitigación propuesta:</b> '+r.mit+'</p>';
+    };
+    cell.appendChild(b);
+  });
+
+  /* ---------- Pestañas ---------- */
+  var tabBtns=document.querySelectorAll('#tabs .btn');
+  tabBtns.forEach(function(b){b.onclick=function(){
+    tabBtns.forEach(function(x){x.classList.remove('on');x.setAttribute('aria-selected','false')});b.classList.add('on');b.setAttribute('aria-selected','true');
+    document.querySelectorAll('.tabpanel').forEach(function(p){p.classList.toggle('on',p.id===b.dataset.tab)});
+  }});
+
+  /* ---------- Diagrama ---------- */
+  var info={
+    sensor:['Sensores IoT de campo','Miden humedad del suelo, temperatura y nivel de tanques; envían pocos bytes cada pocos minutos por LoRa.','Consumen muy poca energía y funcionan años con batería, ideal para cultivos lejanos sin electricidad.'],
+    gw:['Gateway LoRaWAN','Recibe las señales de miles de sensores en varios kilómetros y las reenvía por 4G/LTE o enlace satelital al servidor de red en la nube.','Resuelve la desconexión rural: un gateway solar cubre fincas completas. Si un gateway cae, los sensores cercanos se escuchan desde otro.'],
+    lns:['Servidor de red LoRaWAN','Recibe los paquetes de todos los gateways, elimina duplicados, gestiona las llaves de cifrado y entrega los datos a las aplicaciones (por ejemplo AWS IoT Core for LoRaWAN o ChirpStack).','Centraliza la gestión de miles de sensores y entrega la telemetría directamente a la nube donde se analiza.'],
+    users:['Usuarios (VLAN 40)','Computadores del personal administrativo y logístico.','Separados de voz e IoT para que un equipo infectado no alcance los sistemas críticos.'],
+    phones:['Teléfonos IP (VLAN 20)','Reemplazan la telefonía análoga y se registran en la PBX virtual en la nube.','Llamadas con calidad digital, extensiones entre sedes y movilidad con softphone.'],
+    sw:['Switch capa 3 por sede','Conecta usuarios y teléfonos, separa las VLAN, enruta entre ellas y marca el tráfico con DSCP.','Base de la segmentación local; aplica QoS desde el origen del tráfico.'],
+    dhcp:['Servicios DHCP y DNS','Asignan direcciones IP por VLAN y resuelven nombres internos. En la nube, Route 53 y Azure DNS resuelven con chequeo de salud.','Sin DHCP y DNS confiables ningún equipo se conecta; el DNS con chequeo de salud habilita la conmutación entre nubes.'],
+    sdn:['Controlador SDN / SD-WAN','Programa rutas y políticas de toda la red desde un punto central (por ejemplo OpenDaylight con OpenFlow o un orquestador SD-WAN). En un centro de datos propio se usaría Cisco ACI.','Un cambio se aplica a todas las sedes a la vez y elimina la configuración equipo por equipo.'],
+    vfw:['Firewall virtual (NFV)','Inspecciona y filtra el tráfico entre VLAN, sedes y nube. Corre como software en servidores estándar.','Reemplaza firewalls de hardware que hoy son cuello de botella; escala sumando capacidad virtual.'],
+    vrouter:['vRouter SD-WAN','Une sedes y nubes con túneles IPsec; elige el mejor enlace según latencia y prioriza la voz.','Si un enlace se degrada, el tráfico pasa solo al de respaldo. Es la pieza clave de la alta disponibilidad.'],
+    mon:['PRTG + Splunk (NOC/SOC)','PRTG mide disponibilidad, ancho de banda, QoS y estado de sensores. Splunk correlaciona registros de seguridad.','Termina con la ceguera operativa: las fallas se detectan antes de que el usuario las note.'],
+    waf:['Firewall de aplicaciones web (WAF)','Filtra peticiones maliciosas (inyección SQL, XSS, bots) antes de que lleguen a las aplicaciones.','Protege los portales de clientes y proveedores expuestos a internet.'],
+    aws:['AWS VPC (hub)','Red privada principal en la nube, con subredes públicas para el WAF y privadas para aplicaciones y datos. AWS Transit Gateway concentra las conexiones.','Hub de un modelo hub-and-spoke: sedes y Azure se conectan en un solo punto con políticas comunes.'],
+    eks:['Amazon EKS','Clúster de Kubernetes que ejecuta los microservicios en contenedores Docker.','Escala automáticamente en temporada alta y reinicia servicios que fallan.'],
+    azure:['Azure VNet (spoke)','Red privada en Azure, conectada al hub de AWS por VPN IPsec mediante Azure VPN Gateway.','Unifica los servicios hoy aislados y funciona como respaldo activo si AWS falla.'],
+    aks:['Azure AKS','Clúster de Kubernetes equivalente a EKS, con las mismas aplicaciones desplegadas.','Permite mover cargas entre nubes sin reescribir las aplicaciones.'],
+    pbx:['PBX virtual / UCaaS','Central telefónica en la nube (Teams Phone o 3CX) con SIP Trunking hacia la red pública.','Soluciona las fallas entre sucursales y elimina tarifas interurbanas entre sedes.'],
+    iam:['IAM / SSO + MFA','Gestiona identidades y permisos por rol (RBAC) para personas, servicios y administradores en ambas nubes.','Corrige la falta de políticas de acceso robustas en la nube actual.']
+  };
+  var ni=$('nodeInfo'),nodes=document.querySelectorAll('#topo .node');
+  function showNode(g){
+    nodes.forEach(function(n){n.classList.remove('sel')});g.classList.add('sel');
+    var d=info[g.dataset.id];
+    ni.innerHTML='<div class="eyebrow">Componente</div><h3 style="margin-top:0">'+d[0]+'</h3><p><b>Función:</b> '+d[1]+'</p><p style="margin-bottom:0"><b>Justificación:</b> '+d[2]+'</p>';
+    if(innerWidth<=980)ni.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+  nodes.forEach(function(g){
+    g.addEventListener('click',function(){showNode(g)});
+    g.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();showNode(g)}});
+  });
+  var plan={
+    normal:'<div class="eyebrow">Plan B</div><h3 style="margin-top:0">Operación normal</h3><p style="margin-bottom:0">AWS atiende como hub, Azure replica los servicios y la fibra de cada sede lleva el tráfico. Pulse un componente para ver su detalle.</p>',
+    aws:'<div class="eyebrow">Plan B</div><h3 style="margin-top:0">Caída de AWS</h3><p><span class="pill p-bad">AWS fuera de servicio</span> <span class="pill p-ok">Azure asume</span></p><ul class="tight"><li>El chequeo de salud del DNS detecta la falla y redirige el tráfico a Azure en minutos.</li><li>AKS ya ejecuta las mismas aplicaciones; la SD-WAN envía el tráfico de las sedes directo a Azure.</li><li>Los datos se conservan gracias a la réplica entre nubes.</li></ul>',
+    link:'<div class="eyebrow">Plan B</div><h3 style="margin-top:0">Cae la fibra de una sede</h3><p><span class="pill p-bad">Fibra caída</span> <span class="pill p-ok">4G/LTE de respaldo</span></p><ul class="tight"><li>El vRouter SD-WAN detecta la pérdida y conmuta al enlace 4G en segundos.</li><li>QoS mantiene la voz con prioridad; respaldos y descargas esperan.</li><li>PRTG genera una alerta roja para que el NOC gestione con el proveedor.</li></ul>'
+  };
+  var lAws=$('l-aws'),lSw=$('l-sw'),lBk=$('l-bk');
+  var nAws=document.querySelector('.node[data-id="aws"]'),nAz=document.querySelector('.node[data-id="azure"]'),nSw=document.querySelector('.node[data-id="sw"]');
+  var pb=document.querySelectorAll('#planb .btn');
+  pb.forEach(function(b){b.onclick=function(){
+    pb.forEach(function(x){x.classList.remove('on')});b.classList.add('on');
+    var m=b.dataset.mode;
+    lAws.classList.toggle('down',m==='aws');nAws.classList.toggle('fail',m==='aws');nAz.classList.toggle('takeover',m==='aws');
+    lSw.classList.toggle('down',m==='link');lBk.classList.toggle('hidden',m!=='link');nSw.classList.toggle('takeover',m==='link');
+    nodes.forEach(function(n){n.classList.remove('sel')});ni.innerHTML=plan[m];
+  }});
+
+  /* ---------- Tablero de monitoreo ---------- */
+  var kpis=[
+    {k:'wan',t:'Disponibilidad WAN',u:'%',base:99.97,dec:2,dir:'down',w:99.9,b:99,inc:98.6,sp:.04,max:100},
+    {k:'lora',t:'Sensores IoT reportando',u:'%',base:98,dec:0,dir:'down',w:95,b:85,inc:79,sp:2,max:100},
+    {k:'mos',t:'Calidad de voz (MOS)',u:'',base:4.3,dec:1,dir:'down',w:4.0,b:3.6,inc:3.3,sp:.1,max:4.5},
+    {k:'lat',t:'Latencia sede–nube',u:'ms',base:42,dec:0,dir:'up',w:100,b:150,inc:185,sp:8},
+    {k:'cpu',t:'CPU clúster Kubernetes',u:'%',base:48,dec:0,dir:'up',w:75,b:90,inc:94,sp:6,max:100},
+    {k:'waf',t:'Ataques bloqueados por WAF',u:'/h',base:12,dec:0,dir:'up',w:200,b:500,inc:640,sp:6}
+  ];
+  kpis.forEach(function(x){x.v=x.base});
+  var kb=$('kpis'),al=$('alerts'),incident=false,last={};
+  function state(x){return x.dir==='down'?(x.v<x.b?'bad':(x.v<x.w?'warn':'ok')):(x.v>x.b?'bad':(x.v>x.w?'warn':'ok'))}
+  var names={ok:'Normal',warn:'Atención',bad:'Crítico'};
+  function tick(){kpis.forEach(function(x){var t=incident?x.inc:x.base;x.v=t+(Math.random()-.5)*x.sp;if(x.max)x.v=Math.min(x.max,x.v);x.v=Math.max(0,x.v)});render()}
+  function render(){
+    kb.innerHTML='';
+    kpis.forEach(function(x){
+      var s=state(x),d=document.createElement('div');d.className='glass kpi '+(s==='ok'?'':s);
+      d.innerHTML='<span class="st"><i></i>'+names[s]+'</span><div class="v">'+x.v.toFixed(x.dec)+(x.u?' <small style="font-size:.55em;color:var(--muted)">'+x.u+'</small>':'')+'</div><div class="n">'+x.t+'</div>';
+      kb.appendChild(d);
+      if(s!=='ok'&&last[x.k]!==s)addAlert((s==='bad'?'Crítico · ':'Atención · ')+x.t+': '+x.v.toFixed(x.dec)+' '+x.u);
+      last[x.k]=s;
+    });
+  }
+  function addAlert(t){
+    if(al.firstElementChild&&al.firstElementChild.textContent==='Sin alertas activas.')al.innerHTML='';
+    var li=document.createElement('li');li.textContent=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' · '+t;
+    al.insertBefore(li,al.firstChild);while(al.children.length>12)al.removeChild(al.lastChild);
+  }
+  $('incBtn').onclick=function(){incident=true;tick()};
+  $('resetBtn').onclick=function(){incident=false;last={};al.innerHTML='<li>Sin alertas activas.</li>';tick()};
+  render();setInterval(function(){if(!document.hidden)tick()},3000);
+
+  /* ---------- Simulador QoS (modelo E simplificado) ---------- */
+  function lv(v,g,r){return v<g?'ok':(v<=r?'warn':'bad')}
+  function paint(row,s){var td=row.querySelectorAll('td');for(var i=1;i<4;i++){td[i].style.background='';td[i].style.fontWeight=''}
+    var i2=s==='ok'?1:(s==='warn'?2:3);td[i2].style.background='color-mix(in srgb,var(--'+s+') 22%,transparent)';td[i2].style.fontWeight='800'}
+  function qos(){
+    var lat=+$('sLat').value,jit=+$('sJit').value,loss=+$('sLoss').value,calls=+$('sCalls').value,kbps=+$('codec').value,link=+$('link').value,q=$('qosOn').checked;
+    var need=calls*kbps,use=need/link;
+    $('vLat').textContent=lat+' ms';$('vJit').textContent=jit+' ms';$('vLoss').textContent=loss.toFixed(1)+' %';$('vCalls').textContent=calls;
+    var eJ=0,eL=0;
+    if(!q){eJ=15;eL=.5;if(use>.3){eJ+=40*(use-.3);eL+=6*(use-.3)}}
+    if(use>1){eL+=(use-1)*25;eJ+=30}
+    var J=jit+eJ,L=Math.min(30,loss+eL),eff=lat+2*J+10;
+    var R=eff<160?93.2-eff/40:93.2-(eff-120)/10;R-=L*2.5;R=Math.max(0,Math.min(100,R));
+    var mos=1+.035*R+.000007*R*(R-60)*(100-R);mos=Math.max(1,Math.min(4.5,mos));
+    var s=mos>=4?'ok':(mos>=3.6?'warn':'bad');
+    $('mos').textContent=mos.toFixed(2);
+    var arc=$('arc');arc.style.strokeDashoffset=100-((mos-1)/3.5)*100;arc.style.stroke='var(--'+s+')';
+    $('verdict').textContent=s==='ok'?'Llamada de buena calidad':(s==='warn'?'Calidad regular: se notan cortes':'Mala calidad: la llamada no es usable');
+    $('verdict').style.color='var(--'+s+')';
+    paint($('rLat'),lv(lat,150,400));paint($('rJit'),lv(J,30,50));paint($('rLoss'),lv(L,1,3));
+    var msg='Throughput requerido: <b>'+(need/1000).toFixed(2)+' Mbps</b> de '+(link/1000)+' Mbps ('+Math.round(use*100)+'% del enlace). ';
+    if(use>1)msg+='<b style="color:var(--bad)">El enlace está saturado.</b>';
+    else if(use>.3)msg+=q?'La voz supera el 30% reservado: conviene G.729 o más ancho de banda.':'<b style="color:var(--bad)">Sin QoS, la voz compite con los datos.</b>';
+    else msg+='Dentro de la reserva para voz.';
+    if(eJ>0)msg+=' Jitter efectivo '+Math.round(J)+' ms · pérdida efectiva '+L.toFixed(1)+'%.';
+    $('bw').innerHTML=msg;
+  }
+  ['sLat','sJit','sLoss','sCalls','codec','link','qosOn'].forEach(function(id){$(id).addEventListener('input',qos);$(id).addEventListener('change',qos)});
+  qos();
+
+  /* ---------- Tarjetas de seguridad ---------- */
+  var sec=[
+    ['Permisos excesivos en la nube','Cuentas con acceso de administrador que no lo necesitan.','IAM con RBAC: cada rol recibe solo lo necesario. Revisión trimestral de permisos.'],
+    ['Robo de credenciales','Una contraseña filtrada da acceso total a AWS o Azure.','SSO centralizado con MFA obligatorio y bloqueo de inicios de sesión sospechosos.'],
+    ['Ataques a aplicaciones web','Inyección SQL, XSS y bots contra los portales de clientes.','WAF de AWS/Azure con reglas OWASP Top 10 y límite de peticiones.'],
+    ['Puertos expuestos en la nube','Servicios internos accesibles desde internet por error de configuración.','Security Groups y NSG con denegación por defecto; solo el WAF queda expuesto.'],
+    ['Sensores IoT vulnerables','Un sensor comprometido usado como puerta de entrada.','Llaves de sesión únicas de LoRaWAN (AES-128) y VLAN IoT aislada de los usuarios.'],
+    ['Escucha de llamadas VoIP','Captura de conversaciones entre sucursales.','Cifrado SRTP para la voz y TLS para la señalización SIP.']
+  ];
+  var cards=$('cards');
+  sec.forEach(function(s){
+    var d=document.createElement('div');d.className='flip';d.tabIndex=0;d.setAttribute('role','button');d.setAttribute('aria-label','Riesgo: '+s[0]+'. Pulse para ver la mitigación');
+    d.innerHTML='<div class="flip-in"><div class="face front"><div class="eyebrow">Riesgo</div><h3 style="margin:.2rem 0 .4rem">'+s[0]+'</h3><p style="margin:0;font-size:.9rem;color:var(--muted)">'+s[1]+'</p><span class="hint" style="margin-top:10px">Pulse para ver la mitigación ↻</span></div><div class="face back"><div class="eyebrow">Mitigación</div><p style="margin:.4rem 0 0">'+s[2]+'</p></div></div>';
+    var f=function(){d.classList.toggle('on')};
+    d.addEventListener('click',f);d.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();f()}});
+    cards.appendChild(d);
+  });
+
+  /* ---------- Tabla comparativa ---------- */
+  var fb=document.querySelectorAll('#filters .btn');
+  fb.forEach(function(b){b.onclick=function(){
+    fb.forEach(function(x){x.classList.remove('on')});b.classList.add('on');
+    document.querySelectorAll('#cmp tbody tr').forEach(function(tr){tr.classList.toggle('hide',b.dataset.f!=='all'&&tr.dataset.c!==b.dataset.f)});
+  }});
+
+  /* ---------- Quiz ---------- */
+  var qs=[
+    ['¿Qué tecnología conecta mejor los sensores de cultivos lejanos?',['Wi-Fi 6','LoRaWAN','Fibra óptica'],1,'LoRaWAN cubre varios kilómetros con muy bajo consumo de energía.'],
+    ['En SDN, ¿qué se separa del plano de datos?',['El plano de control','El cableado','La nube'],0,'El controlador decide las rutas y los equipos solo reenvían paquetes.'],
+    ['¿Cuál es la latencia máxima recomendada para una buena llamada?',['50 ms','150 ms','500 ms'],1,'La recomendación ITU-T G.114 indica menos de 150 ms en un sentido.'],
+    ['¿Qué componente bloquea una inyección SQL contra el portal web?',['WAF','PBX virtual','Gateway LoRaWAN'],0,'El WAF inspecciona las peticiones web antes de que lleguen a la aplicación.'],
+    ['Si cae AWS, ¿qué mantiene el servicio?',['El switch de la sede','Azure con AKS y conmutación por DNS','El controlador SDN'],1,'La arquitectura multinube replica las aplicaciones en Azure.']
+  ];
+  var qz=$('quiz'),score=0,ans=0;
+  qs.forEach(function(q,qi){
+    var d=document.createElement('div');d.className='q';
+    d.innerHTML='<b>'+(qi+1)+'. '+q[0]+'</b><div class="opts"></div><div class="fb"></div>';
+    var o=d.querySelector('.opts'),f=d.querySelector('.fb');
+    q[1].forEach(function(t,oi){
+      var b=document.createElement('button');b.className='btn opt';b.textContent=t;
+      b.onclick=function(){
+        if(d.dataset.done)return;d.dataset.done=1;ans++;var ok=oi===q[2];if(ok)score++;
+        b.classList.add(ok?'right':'wrong');o.children[q[2]].classList.add('right');
+        f.textContent=(ok?'✓ Correcto. ':'✕ Incorrecto. ')+q[3];
+        if(ans===qs.length){var p=document.createElement('p');p.id='score';p.textContent='Resultado: '+score+' de '+qs.length+' respuestas correctas.';qz.appendChild(p)}
+      };
+      o.appendChild(b);
+    });
+    qz.appendChild(d);
+  });
+})();
+</script>
+</body>
+</html>
